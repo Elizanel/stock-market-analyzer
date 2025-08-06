@@ -1,4 +1,4 @@
-📈 Stock Market Analyzer
+## 📈 Stock Market Analyzer
 
 An interactive app built with Streamlit to visualize stock trends, calculate moving averages, and summarize performance.
 
@@ -13,3 +13,4 @@ An interactive app built with Streamlit to visualize stock trends, calculate mov
 ```bash
 pip install -r requirements.txt
 streamlit run app.py
+
