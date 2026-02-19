@@ -2,63 +2,70 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 
-# Title
+# App title at the top of the page
 st.title("📊 Stock Market Analyzer")
 
-# User input
+# Text input for ticker symbol (default is AAPL so the app isn't blank)
 ticker = st.text_input("Enter Stock Ticker (e.g., AAPL):", "AAPL")
 
-# Timeframe selector
+# Dropdown to choose how much history to pull
 period = st.selectbox("Select Timeframe:", ["1mo", "3mo", "6mo", "1y", "5y"], index=2)
 
-# Only fetch and display if a ticker is entered
+# Only run the logic if the user provided a ticker
 if ticker:
     try:
-        # Download stock data
-        data = yf.download(ticker, period=period, group_by='column')
+        # Download historical price data from Yahoo Finance
+        data = yf.download(ticker, period=period, group_by="column")
 
-        # Flatten MultiIndex columns if they exist
+        # Sometimes yfinance returns MultiIndex columns; flatten them if that happens
         if isinstance(data.columns, pd.MultiIndex):
             data.columns = [col[0] for col in data.columns]
 
-        # Rename columns for better readability
-        data.rename(columns={
-            "Open": "Opening Price",
-            "High": "High Price",
-            "Low": "Low Price",
-            "Close": "Closing Price",
-            "Volume": "Trade Volume"
-        }, inplace=True)
+        # Rename columns to be more readable in the UI
+        data.rename(
+            columns={
+                "Open": "Opening Price",
+                "High": "High Price",
+                "Low": "Low Price",
+                "Close": "Closing Price",
+                "Volume": "Trade Volume",
+            },
+            inplace=True,
+        )
 
-        # OPTIONAL: Display column names for debugging
+        # Show the current columns (useful for debugging when formats change)
         st.markdown("### 📋 Current Stock Data Columns")
-        # Display each column name as a bullet point or simple list
         for col in data.columns:
             st.write(f"- {col}")
 
-
-        # Check that 'Closing Price' column exists
+        # Make sure we actually have a Closing Price column before doing calculations
         if "Closing Price" in data.columns:
-            # Calculate 50-day moving average
+            # Calculate a 50-day moving average of the closing price
             data["MA50"] = data["Closing Price"].rolling(window=50).mean()
 
-            # Display chart
+            # Plot closing price + moving average
             st.subheader("📈 Price Chart with 50-Day Moving Average")
             st.line_chart(data[["Closing Price", "MA50"]])
 
-            # Show summary statistics
+            # Display summary stats like mean, min, max, etc.
             st.subheader("📊 Summary Statistics")
             st.write(data.describe())
 
-            # Summary sentence
-            change = data["Closing Price"][-1] - data["Closing Price"][0]
+            # Calculate total change over the selected period (use iloc for safe indexing)
+            change = data["Closing Price"].iloc[-1] - data["Closing Price"].iloc[0]
             direction = "increased" if change > 0 else "decreased"
-            st.write(f"💬 {ticker} has {direction} by ${abs(change):.2f} over the selected period.")
+
+            # Display a simple insight sentence
+            st.write(
+                f"💬 {ticker} has {direction} by ${abs(change):.2f} over the selected period."
+            )
 
         else:
+            # If the expected column isn't found, stop gracefully
             st.error("❌ Could not find 'Closing Price' in the data. Try a different stock or timeframe.")
 
     except Exception as e:
+        # Catch errors like invalid tickers, network issues, or Yahoo rate limits
         st.error(f"⚠️ Something went wrong: {e}")
 
     
